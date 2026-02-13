@@ -9,6 +9,7 @@ const navSections = [
         items: [
             { name: 'Dashboard', path: '/', icon: LayoutDashboard },
             { name: 'Leads', path: '/leads', icon: Users },
+            { name: 'Contacts', path: '/contacts', icon: UserPlus },
             { name: 'Opportunities', path: '/opportunities', icon: Briefcase },
             { name: 'Accounts', path: '/accounts', icon: Building2 },
         ]

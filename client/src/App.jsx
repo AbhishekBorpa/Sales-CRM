@@ -15,6 +15,7 @@ import Register from './pages/Register';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
+import Contacts from './pages/Contacts';
 import Products from './pages/Products';
 import Quotes from './pages/Quotes';
 import Tasks from './pages/Tasks';
@@ -58,6 +59,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="leads" element={<Leads />} />
             <Route path="leads/:id" element={<LeadDetail />} />
+            <Route path="contacts" element={<Contacts />} />
             <Route path="opportunities" element={<Opportunities />} />
             <Route path="opportunities/:id" element={<OpportunityDetail />} />
             <Route path="tasks" element={<Tasks />} />
