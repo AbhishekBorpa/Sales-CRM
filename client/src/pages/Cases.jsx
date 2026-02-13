@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchCases, createCase, updateCase, deleteCase } from '../services/api';
-import { AlertCircle, CheckCircle, Clock, Plus, Filter } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Plus, Filter, Pencil, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import Modal from '../components/Modal';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 const Cases = () => {
     const [cases, setCases] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingCaseId, setEditingCaseId] = useState(null);
     const [newCase, setNewCase] = useState({ subject: '', description: '', priority: 'Medium', status: 'New' });
 
     useEffect(() => {
@@ -26,14 +27,48 @@ const Cases = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const created = await createCase(newCase);
-            setCases([created, ...cases]);
+            if (editingCaseId) {
+                await updateCase(editingCaseId, newCase);
+                toast.success('Case updated');
+            } else {
+                await createCase(newCase);
+                toast.success('Case created');
+            }
             setIsModalOpen(false);
+            setEditingCaseId(null);
             setNewCase({ subject: '', description: '', priority: 'Medium', status: 'New' });
-            toast.success('Case created');
+            loadCases();
         } catch (error) {
-            toast.error('Failed to create case');
+            toast.error(editingCaseId ? 'Failed to update case' : 'Failed to create case');
         }
+    };
+
+    const handleEdit = (ticket) => {
+        setEditingCaseId(ticket._id);
+        setNewCase({
+            subject: ticket.subject,
+            description: ticket.description,
+            priority: ticket.priority,
+            status: ticket.status
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Delete this case?')) return;
+        try {
+            await deleteCase(id);
+            toast.success('Case deleted');
+            loadCases();
+        } catch (error) {
+            toast.error('Failed to delete case');
+        }
+    };
+
+    const handleOpenCreateModal = () => {
+        setEditingCaseId(null);
+        setNewCase({ subject: '', description: '', priority: 'Medium', status: 'New' });
+        setIsModalOpen(true);
     };
 
     const getPriorityColor = (p) => {
@@ -55,7 +90,7 @@ const Cases = () => {
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Cases</h1>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={handleOpenCreateModal}
                     className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center gap-2"
                 >
                     <Plus size={16} />
@@ -71,6 +106,7 @@ const Cases = () => {
                             <th className="px-6 py-4">Status</th>
                             <th className="px-6 py-4">Priority</th>
                             <th className="px-6 py-4">Created</th>
+                            <th className="px-6 py-4 w-24">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -94,13 +130,39 @@ const Cases = () => {
                                 <td className="px-6 py-4 text-sm text-gray-500">
                                     {new Date(ticket.createdAt).toLocaleDateString()}
                                 </td>
+                                <td className="px-6 py-4 text-sm">
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleEdit(ticket)}
+                                            className="text-gray-400 hover:text-blue-600 p-1 transition-colors"
+                                            title="Edit"
+                                        >
+                                            <Pencil size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(ticket._id)}
+                                            className="text-gray-400 hover:text-red-600 p-1 transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="New Support Case">
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setEditingCaseId(null);
+                    setNewCase({ subject: '', description: '', priority: 'Medium', status: 'New' });
+                }}
+                title={editingCaseId ? "Edit Support Case" : "New Support Case"}
+            >
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
@@ -150,8 +212,19 @@ const Cases = () => {
                         </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsModalOpen(false);
+                                setEditingCaseId(null);
+                                setNewCase({ subject: '', description: '', priority: 'Medium', status: 'New' });
+                            }}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                        >
+                            Cancel
+                        </button>
                         <button type="submit" className="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-700">
-                            Create Case
+                            {editingCaseId ? 'Update Case' : 'Create Case'}
                         </button>
                     </div>
                 </form>

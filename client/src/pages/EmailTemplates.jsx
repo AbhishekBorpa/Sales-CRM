@@ -3,8 +3,12 @@ import { Mail, Plus, Pencil, Trash2, Eye, Copy } from 'lucide-react';
 import Modal from '../components/Modal';
 import { toast } from 'sonner';
 import { CardSkeleton, EmptyState } from '../components/UXComponents';
-
-const API_URL = 'http://localhost:5001/api';
+import {
+    fetchEmailTemplates,
+    createEmailTemplate,
+    updateEmailTemplate,
+    deleteEmailTemplate
+} from '../services/api';
 
 const EmailTemplates = () => {
     const [templates, setTemplates] = useState([]);
@@ -25,8 +29,7 @@ const EmailTemplates = () => {
     const fetchTemplates = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/email-templates`);
-            const data = await response.json();
+            const data = await fetchEmailTemplates();
             setTemplates(data);
         } catch (error) {
             toast.error('Failed to load templates');
@@ -38,21 +41,15 @@ const EmailTemplates = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const url = selectedTemplate
-                ? `${API_URL}/email-templates/${selectedTemplate._id}`
-                : `${API_URL}/email-templates`;
-
-            const response = await fetch(url, {
-                method: selectedTemplate ? 'PATCH' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-
-            if (response.ok) {
-                toast.success(selectedTemplate ? 'Template updated' : 'Template created');
-                fetchTemplates();
-                closeModal();
+            if (selectedTemplate) {
+                await updateEmailTemplate(selectedTemplate._id, formData);
+            } else {
+                await createEmailTemplate(formData);
             }
+
+            toast.success(selectedTemplate ? 'Template updated' : 'Template created');
+            fetchTemplates();
+            closeModal();
         } catch (error) {
             toast.error('Failed to save template');
         }
@@ -61,7 +58,7 @@ const EmailTemplates = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Delete this template?')) return;
         try {
-            await fetch(`${API_URL}/email-templates/${id}`, { method: 'DELETE' });
+            await deleteEmailTemplate(id);
             toast.success('Template deleted');
             fetchTemplates();
         } catch (error) {

@@ -6,10 +6,12 @@ const {
     getLineItems, addLineItem
 } = require('../controllers/opportunityController');
 
+const { validate, schemas } = require('../middleware/validate');
+
 router.get('/', getOpportunities);
 router.get('/:id', getOpportunityById);
-router.post('/', createOpportunity);
-router.patch('/:id', updateOpportunity); // Use PATCH for partial updates
+router.post('/', validate(schemas.opportunity), createOpportunity);
+router.patch('/:id', validate(schemas.opportunityUpdate), updateOpportunity); // Use PATCH for partial updates
 router.delete('/:id', deleteOpportunity);
 
 // Related Routes

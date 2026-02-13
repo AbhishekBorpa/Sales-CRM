@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchStats } from '../services/api';
+import { fetchDashboardStats, fetchSalesPipeline, fetchLeadSources, fetchAuditLogs } from '../services/api';
 import { DollarSign, Users, Briefcase, TrendingUp, Activity, ArrowRight, Target, Clock, LifeBuoy, Plus, Phone, Mail, FileText, CheckSquare, Package, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import clsx from 'clsx';
@@ -39,27 +39,24 @@ const QuickAction = ({ icon: Icon, label, to, color }) => (
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [pipelineData, setPipelineData] = useState([]);
-    const [revenueData, setRevenueData] = useState([]);
+    const [sourceData, setSourceData] = useState([]);
     const [activities, setActivities] = useState([]);
-    const [topProducts, setTopProducts] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadDashboardData = async () => {
             try {
-                const [statsRes, pipelineRes, revenueRes, activityRes, productsRes] = await Promise.all([
-                    fetch(`${API_URL}/stats`),
-                    fetch(`${API_URL}/reports/pipeline-stages`),
-                    fetch(`${API_URL}/reports/revenue-by-industry`),
-                    fetch(`${API_URL}/audit?limit=6`),
-                    fetch(`${API_URL}/reports/top-products`)
+                const [statsData, pipeline, sources, audit] = await Promise.all([
+                    fetchDashboardStats(),
+                    fetchSalesPipeline(),
+                    fetchLeadSources(),
+                    fetchAuditLogs({ limit: 5 })
                 ]);
 
-                if (statsRes.ok) setStats(await statsRes.json());
-                if (pipelineRes.ok) setPipelineData(await pipelineRes.json());
-                if (revenueRes.ok) setRevenueData(await revenueRes.json());
-                if (activityRes.ok) setActivities(await activityRes.json());
-                if (productsRes.ok) setTopProducts(await productsRes.json());
+                setStats(statsData);
+                setPipelineData(pipeline);
+                setSourceData(sources);
+                setActivities(audit.logs || []);
             } catch (error) {
                 console.error('Dashboard load error:', error);
                 toast.error('Failed to load dashboard data');
@@ -108,10 +105,10 @@ const Dashboard = () => {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Total Revenue"
-                    value={`$${(stats?.totalRevenue || 0).toLocaleString()}`}
+                    value={`$${(stats?.closedWonValue || 0).toLocaleString()}`}
                     subtext="Closed Won Deals"
                     icon={DollarSign}
                     colorClass="bg-green-500 shadow-green-200"
@@ -119,35 +116,27 @@ const Dashboard = () => {
                 />
                 <StatCard
                     title="Pipeline Value"
-                    value={`$${(stats?.pipelineValue || 0).toLocaleString()}`}
-                    subtext="Open Opportunities"
+                    value={`$${(stats?.totalPipelineValue || 0).toLocaleString()}`}
+                    subtext="All Opportunities"
                     icon={Briefcase}
                     colorClass="bg-purple-500 shadow-purple-200"
                     trend={8}
                 />
                 <StatCard
-                    title="Active Leads"
+                    title="Active Deals"
+                    value={stats?.activeDeals || 0}
+                    subtext="In Progress"
+                    icon={Target}
+                    colorClass="bg-orange-500 shadow-orange-200"
+                    trend={5}
+                />
+                <StatCard
+                    title="Total Leads"
                     value={stats?.totalLeads || 0}
                     subtext="Potential Customers"
                     icon={Users}
                     colorClass="bg-blue-500 shadow-blue-200"
                     trend={5}
-                />
-                <StatCard
-                    title="Open Cases"
-                    value={stats?.openCases || 0}
-                    subtext="Support Tickets"
-                    icon={LifeBuoy}
-                    colorClass="bg-red-500 shadow-red-200"
-                    trend={-2}
-                />
-                <StatCard
-                    title="Win Rate"
-                    value={`${stats?.conversionRate || 15}%`}
-                    subtext="Opportunity to Close"
-                    icon={Target}
-                    colorClass="bg-orange-500 shadow-orange-200"
-                    trend={-1}
                 />
             </div>
 
@@ -159,38 +148,38 @@ const Dashboard = () => {
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={pipelineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                <XAxis dataKey="_id" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} />
+                                <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} />
                                 <YAxis stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }}
                                     cursor={{ fill: 'transparent' }}
                                 />
-                                <Bar dataKey="totalValue" fill="#4F46E5" radius={[4, 4, 0, 0]} barSize={40} />
+                                <Bar dataKey="value" fill="#4F46E5" radius={[4, 4, 0, 0]} barSize={40} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Revenue by Industry */}
+                {/* Leads by Source */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Revenue by Industry</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Leads by Source</h3>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
-                                    data={revenueData}
+                                    data={sourceData}
                                     cx="50%"
                                     cy="50%"
                                     innerRadius={60}
                                     outerRadius={80}
                                     paddingAngle={5}
-                                    dataKey="totalRevenue"
+                                    dataKey="value"
                                 >
-                                    {revenueData.map((entry, index) => (
+                                    {sourceData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                                <Tooltip />
                                 <Legend verticalAlign="bottom" height={36} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -234,40 +223,6 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Top Selling Products - New Widget */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Products</h3>
-                        <Link to="/products" className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                            <Package size={18} className="text-gray-400" />
-                        </Link>
-                    </div>
-                    <div className="space-y-4">
-                        {topProducts.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">No product data</div>
-                        ) : (
-                            topProducts.map((product, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-brand-50 dark:bg-brand-900/30 rounded-lg flex items-center justify-center text-brand-600">
-                                            <span className="text-sm font-bold">#{idx + 1}</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</p>
-                                            <p className="text-xs text-green-600 flex items-center gap-1">
-                                                <TrendingUp size={10} /> {product.growth}% growth
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                        ${product.revenue.toLocaleString()}
-                                    </span>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-
                 {/* Tasks Overview */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                     <div className="flex justify-between items-center mb-6">
@@ -277,7 +232,6 @@ const Dashboard = () => {
                         </Link>
                     </div>
                     <div className="space-y-3">
-                        {/* Mock Tasks for now until we have task endpoint hooked up to dashboard */}
                         {[
                             { title: 'Call with Acme Corp', priority: 'High', due: 'Today' },
                             { title: 'Send proposal to TechStart', priority: 'Medium', due: 'Tomorrow' },
@@ -287,7 +241,7 @@ const Dashboard = () => {
                             <div key={idx} className="flex items-center justify-between p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:border-brand-200 transition-colors cursor-pointer">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-2 h-2 rounded-full ${task.priority === 'High' ? 'bg-red-500' :
-                                            task.priority === 'Medium' ? 'bg-orange-500' : 'bg-blue-500'
+                                        task.priority === 'Medium' ? 'bg-orange-500' : 'bg-blue-500'
                                         }`} />
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{task.title}</span>
                                 </div>

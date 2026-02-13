@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import clsx from 'clsx';
-import { Trash2, DollarSign, Briefcase, TrendingUp, Plus, Calendar, User } from 'lucide-react';
+import { Trash2, DollarSign, Briefcase, TrendingUp, Plus, Calendar, User, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { fetchOpportunities, deleteOpportunity, updateOpportunity } from '../services/api';
+import { fetchOpportunities, createOpportunity, deleteOpportunity, updateOpportunity } from '../services/api';
 
 import Modal from '../components/Modal';
 import ActivityTimeline from '../components/ActivityTimeline';
@@ -32,27 +32,47 @@ const Opportunities = () => {
     const [columns, setColumns] = useState({});
     const [selectedOpp, setSelectedOpp] = useState(null);
     const [stats, setStats] = useState({ totalValue: 0, count: 0, avgValue: 0 });
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newOpp, setNewOpp] = useState({ title: '', value: 0, stage: 'Prospecting', closeDate: '' });
+    const [page, setPage] = useState(1);
+    const [limit] = useState(20); // Higher limit for Kanban
+    const [totalPages, setTotalPages] = useState(1);
+    const [search, setSearch] = useState('');
+    const [editingOppId, setEditingOppId] = useState(null);
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [page, search]);
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (page !== 1) setPage(1);
+            else loadData();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [search]);
 
     const loadData = () => {
-        fetchOpportunities().then(data => {
-            setOpportunities(data);
+        fetchOpportunities({ page, limit, search }).then(data => {
+            const opps = data.opportunities || [];
+            setOpportunities(opps);
+            setTotalPages(data.totalPages || 1);
+            setTotalOpps(data.totalOpportunities || 0);
+
             // Group by stage
             const cols = STAGES.reduce((acc, stage) => {
-                acc[stage] = data.filter(o => o.stage === stage);
+                acc[stage] = opps.filter(o => o.stage === stage);
                 return acc;
             }, {});
             setColumns(cols);
 
-            // Calculate Stats
-            const totalValue = data.reduce((sum, o) => sum + (o.value || 0), 0);
+            // Calculate Stats (only for current page/view)
+            const totalValue = opps.reduce((sum, o) => sum + (o.value || 0), 0);
             setStats({
                 totalValue,
-                count: data.length,
-                avgValue: data.length ? Math.round(totalValue / data.length) : 0
+                count: opps.length,
+                avgValue: opps.length ? Math.round(totalValue / opps.length) : 0
             });
 
         }).catch(console.error);
@@ -74,6 +94,44 @@ const Opportunities = () => {
         } catch (error) {
             toast.error('Failed to delete opportunity');
         }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            if (editingOppId) {
+                await updateOpportunity(editingOppId, newOpp);
+                toast.success('Opportunity updated successfully');
+            } else {
+                await createOpportunity(newOpp);
+                toast.success('Opportunity created successfully');
+            }
+            setIsModalOpen(false);
+            setEditingOppId(null);
+            setNewOpp({ title: '', value: 0, stage: 'Prospecting', closeDate: '' });
+            loadData();
+        } catch (error) {
+            toast.error(error.message || (editingOppId ? 'Failed to update opportunity' : 'Failed to create opportunity'));
+            console.error(error);
+        }
+    };
+
+    const handleEdit = (e, opp) => {
+        e.stopPropagation();
+        setEditingOppId(opp._id);
+        setNewOpp({
+            title: opp.title,
+            value: opp.value || 0,
+            stage: opp.stage,
+            closeDate: opp.closeDate ? new Date(opp.closeDate).toISOString().split('T')[0] : ''
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleOpenCreateModal = () => {
+        setEditingOppId(null);
+        setNewOpp({ title: '', value: 0, stage: 'Prospecting', closeDate: '' });
+        setIsModalOpen(true);
     };
 
 
@@ -126,10 +184,24 @@ const Opportunities = () => {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pipeline</h1>
                     <p className="text-gray-500 dark:text-gray-400">Manage your active deals and track progress.</p>
                 </div>
-                <button className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors flex items-center gap-2">
-                    <Plus size={18} />
-                    New Deal
-                </button>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search deals..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-3 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-brand-500 dark:text-white"
+                        />
+                    </div>
+                    <button
+                        onClick={handleOpenCreateModal}
+                        className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors flex items-center gap-2"
+                    >
+                        <Plus size={18} />
+                        New Deal
+                    </button>
+                </div>
             </div>
 
             {/* Pipeline Stats Header */}
@@ -229,12 +301,22 @@ const Opportunities = () => {
                                                                 </div>
                                                             </div>
 
-                                                            <button
-                                                                onClick={(e) => handleDelete(e, opp._id)}
-                                                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
+                                                                <button
+                                                                    onClick={(e) => handleEdit(e, opp)}
+                                                                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
+                                                                    title="Edit"
+                                                                >
+                                                                    <Pencil size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => handleDelete(e, opp._id)}
+                                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
+                                                                    title="Delete"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </Draggable>
@@ -248,6 +330,27 @@ const Opportunities = () => {
                     })}
                 </div>
             </DragDropContext>
+
+            {/* Pagination */}
+            <div className="flex justify-center items-center gap-4 mt-4 pb-6">
+                <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                >
+                    Previous
+                </button>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Page {page} of {totalPages}
+                </span>
+                <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                >
+                    Next
+                </button>
+            </div>
 
             {selectedOpp && (
                 <Modal isOpen={!!selectedOpp} onClose={() => setSelectedOpp(null)} title={selectedOpp.title}>
@@ -283,6 +386,85 @@ const Opportunities = () => {
                     </div>
                 </Modal>
             )}
+
+            {/* Create/Edit Opportunity Modal */}
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setEditingOppId(null);
+                    setNewOpp({ title: '', value: 0, stage: 'Prospecting', closeDate: '' });
+                }}
+                title={editingOppId ? "Edit Opportunity" : "Create New Opportunity"}
+            >
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deal Name *</label>
+                        <input
+                            type="text"
+                            required
+                            value={newOpp.title}
+                            onChange={(e) => setNewOpp({ ...newOpp, title: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white"
+                            placeholder="Enterprise Software Deal"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Value *</label>
+                            <input
+                                type="number"
+                                required
+                                value={newOpp.value}
+                                onChange={(e) => setNewOpp({ ...newOpp, value: parseFloat(e.target.value) || 0 })}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white"
+                                placeholder="50000"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stage</label>
+                            <select
+                                value={newOpp.stage}
+                                onChange={(e) => setNewOpp({ ...newOpp, stage: e.target.value })}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white"
+                            >
+                                {STAGES.map(stage => (
+                                    <option key={stage} value={stage}>{stage}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Close Date *</label>
+                        <input
+                            type="date"
+                            required
+                            value={newOpp.closeDate}
+                            onChange={(e) => setNewOpp({ ...newOpp, closeDate: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsModalOpen(false);
+                                setEditingOppId(null);
+                                setNewOpp({ title: '', value: 0, stage: 'Prospecting', closeDate: '' });
+                            }}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg"
+                        >
+                            {editingOppId ? 'Update Opportunity' : 'Create Opportunity'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 };

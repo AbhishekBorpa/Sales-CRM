@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, Filter, Trash2, Download, Globe, Phone, Building, MoreVertical, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Filter, Trash2, Download, Globe, Phone, Building, MoreVertical, Plus, Pencil } from 'lucide-react';
 import Modal from '../components/Modal';
 import { toast } from 'sonner';
 import clsx from 'clsx';
-import { fetchAccounts, createAccount, deleteAccount } from '../services/api';
+import { fetchAccounts, createAccount, updateAccount, deleteAccount } from '../services/api';
 
 const Accounts = () => {
     const [accounts, setAccounts] = useState([]);
@@ -14,6 +14,7 @@ const Accounts = () => {
     const [selectedAccounts, setSelectedAccounts] = useState([]);
     const [industryFilter, setIndustryFilter] = useState('All');
     const [showFilters, setShowFilters] = useState(false);
+    const [editingAccountId, setEditingAccountId] = useState(null);
 
     useEffect(() => {
         fetchAccounts().then(setAccounts).catch(console.error);
@@ -80,14 +81,39 @@ const Accounts = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const created = await createAccount(newAccount);
-            setAccounts([created, ...accounts]);
+            if (editingAccountId) {
+                const updated = await updateAccount(editingAccountId, newAccount);
+                setAccounts(accounts.map(a => a._id === editingAccountId ? updated : a));
+                toast.success('Account updated successfully');
+            } else {
+                const created = await createAccount(newAccount);
+                setAccounts([created, ...accounts]);
+                toast.success('Account created successfully');
+            }
             setIsModalOpen(false);
+            setEditingAccountId(null);
             setNewAccount({ name: '', industry: '', website: '', phone: '' });
-            toast.success('Account created successfully');
         } catch (error) {
-            toast.error('Failed to create account');
+            toast.error(editingAccountId ? 'Failed to update account' : 'Failed to create account');
         }
+    };
+
+    const handleEdit = (e, account) => {
+        e.stopPropagation();
+        setEditingAccountId(account._id);
+        setNewAccount({
+            name: account.name,
+            industry: account.industry || '',
+            website: account.website || '',
+            phone: account.phone || ''
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleOpenCreateModal = () => {
+        setEditingAccountId(null);
+        setNewAccount({ name: '', industry: '', website: '', phone: '' });
+        setIsModalOpen(true);
     };
 
     const sortedAndFilteredAccounts = useMemo(() => {
@@ -155,7 +181,7 @@ const Accounts = () => {
                         Export
                     </button>
                     <button
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={handleOpenCreateModal}
                         className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors flex items-center gap-2"
                     >
                         <Plus size={16} />
@@ -257,13 +283,22 @@ const Accounts = () => {
                                     ) : '-'}
                                 </td>
                                 <td className="px-6 py-4">
-                                    <button
-                                        onClick={(e) => handleDelete(e, account._id)}
-                                        className="text-gray-400 hover:text-red-600 p-1 transition-colors"
-                                        title="Delete"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={(e) => handleEdit(e, account)}
+                                            className="text-gray-400 hover:text-blue-600 p-1 transition-colors"
+                                            title="Edit"
+                                        >
+                                            <Pencil size={16} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDelete(e, account._id)}
+                                            className="text-gray-400 hover:text-red-600 p-1 transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -280,8 +315,12 @@ const Accounts = () => {
             {/* Create Account Modal */}
             <Modal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="Create New Account"
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setEditingAccountId(null);
+                    setNewAccount({ name: '', industry: '', website: '', phone: '' });
+                }}
+                title={editingAccountId ? 'Edit Account' : 'Create New Account'}
             >
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input
@@ -322,7 +361,11 @@ const Accounts = () => {
                     <div className="flex justify-end gap-3 pt-4">
                         <button
                             type="button"
-                            onClick={() => setIsModalOpen(false)}
+                            onClick={() => {
+                                setIsModalOpen(false);
+                                setEditingAccountId(null);
+                                setNewAccount({ name: '', industry: '', website: '', phone: '' });
+                            }}
                             className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                         >
                             Cancel
@@ -331,7 +374,7 @@ const Accounts = () => {
                             type="submit"
                             className="px-4 py-2 text-sm text-white bg-brand-600 hover:bg-brand-700 rounded-lg"
                         >
-                            Create Account
+                            {editingAccountId ? 'Update Account' : 'Create Account'}
                         </button>
                     </div>
                 </form>

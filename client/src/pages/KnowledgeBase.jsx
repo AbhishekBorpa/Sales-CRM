@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { fetchArticles, createArticle } from '../services/api';
-import { BookOpen, Search, Plus, FileText, ChevronRight } from 'lucide-react';
+import { fetchArticles, createArticle, updateArticle, deleteArticle } from '../services/api';
+import { BookOpen, Search, Plus, FileText, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { toast } from 'sonner';
 
@@ -8,6 +8,7 @@ const KnowledgeBase = () => {
     const [articles, setArticles] = useState([]);
     const [filterText, setFilterText] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingArticleId, setEditingArticleId] = useState(null);
     const [newArticle, setNewArticle] = useState({ title: '', content: '', category: 'General' });
     const [selectedArticle, setSelectedArticle] = useState(null);
 
@@ -15,17 +16,56 @@ const KnowledgeBase = () => {
         fetchArticles().then(setArticles).catch(console.error);
     }, []);
 
+    const loadData = () => {
+        fetchArticles().then(setArticles).catch(console.error);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const created = await createArticle(newArticle);
-            setArticles([...articles, created]);
+            if (editingArticleId) {
+                await updateArticle(editingArticleId, newArticle);
+                toast.success('Article updated');
+            } else {
+                await createArticle(newArticle);
+                toast.success('Article published');
+            }
             setIsModalOpen(false);
+            setEditingArticleId(null);
             setNewArticle({ title: '', content: '', category: 'General' });
-            toast.success('Article published');
+            loadData();
         } catch (error) {
-            toast.error('Failed to publish article');
+            toast.error(editingArticleId ? 'Failed to update article' : 'Failed to publish article');
         }
+    };
+
+    const handleEdit = (e, article) => {
+        e.stopPropagation();
+        setEditingArticleId(article._id);
+        setNewArticle({
+            title: article.title,
+            content: article.content,
+            category: article.category
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (e, id) => {
+        e.stopPropagation();
+        if (!window.confirm('Delete this article?')) return;
+        try {
+            await deleteArticle(id);
+            toast.success('Article deleted');
+            loadData();
+        } catch (error) {
+            toast.error('Failed to delete article');
+        }
+    };
+
+    const handleOpenCreateModal = () => {
+        setEditingArticleId(null);
+        setNewArticle({ title: '', content: '', category: 'General' });
+        setIsModalOpen(true);
     };
 
     const filteredArticles = articles.filter(a =>
@@ -40,7 +80,7 @@ const KnowledgeBase = () => {
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Knowledge Base</h1>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={handleOpenCreateModal}
                     className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center gap-2"
                 >
                     <Plus size={16} />
@@ -95,7 +135,23 @@ const KnowledgeBase = () => {
                                 <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded-md">
                                     {article.category}
                                 </span>
-                                <span className="text-xs text-gray-400">{new Date(article.createdAt).toLocaleDateString()}</span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={(e) => handleEdit(e, article)}
+                                        className="text-gray-400 hover:text-blue-600 p-1 opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Edit"
+                                    >
+                                        <Pencil size={14} />
+                                    </button>
+                                    <button
+                                        onClick={(e) => handleDelete(e, article._id)}
+                                        className="text-gray-400 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Delete"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                    <span className="text-xs text-gray-400">{new Date(article.createdAt).toLocaleDateString()}</span>
+                                </div>
                             </div>
                             <h3 className="font-bold text-gray-900 dark:text-white mb-2 group-hover:text-brand-600 transition-colors">
                                 {article.title}
@@ -108,8 +164,16 @@ const KnowledgeBase = () => {
                 </div>
             </div>
 
-            {/* Create Article Modal */}
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Publish Article">
+            {/* Create/Edit Article Modal */}
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setEditingArticleId(null);
+                    setNewArticle({ title: '', content: '', category: 'General' });
+                }}
+                title={editingArticleId ? "Edit Article" : "Publish Article"}
+            >
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
@@ -142,8 +206,19 @@ const KnowledgeBase = () => {
                         />
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsModalOpen(false);
+                                setEditingArticleId(null);
+                                setNewArticle({ title: '', content: '', category: 'General' });
+                            }}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                        >
+                            Cancel
+                        </button>
                         <button type="submit" className="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-700">
-                            Publish
+                            {editingArticleId ? 'Update' : 'Publish'}
                         </button>
                     </div>
                 </form>

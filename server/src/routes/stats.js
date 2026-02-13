@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getStats } = require('../controllers/dashboardController');
+const { getDashboardStats, getSalesPipeline, getLeadSources } = require('../controllers/statsController');
+const { protect } = require('../middleware/authMiddleware');
 
-router.get('/', getStats);
+router.use(protect); // Protect all stat routes
+
+router.get('/dashboard', getDashboardStats);
+router.get('/pipeline', getSalesPipeline);
+router.get('/sources', getLeadSources);
 
 module.exports = router;
