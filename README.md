@@ -1,61 +1,82 @@
-# Sal - Sales CRM
+# Sal - Advanced Sales CRM
 
-A comprehensive Customer Relationship Management (CRM) system for managing sales pipelines, customer support, and business operations.
+Sal is a high-performance, full-stack Customer Relationship Management (CRM) system designed for streamlined sales operations, customer relationship management, and data-driven decision making.
 
-## Features
+![Dashboard Preview](https://img.shields.io/badge/Status-Complete-green)
+![Tech Stack](https://img.shields.io/badge/Stack-MERN-blue)
 
-- **Sales Pipeline:** Manage Leads, Opportunities, Accounts, and Contacts.
-- **Support:** Track and resolve Cases (tickets) with priority levels.
-- **Knowledge Base:** Internal articles for documentation and support.
-- **Product Catalog:** Manage Products and Quotes.
-- **Dashboard:** Visual analytics for sales performance and activity tracking.
-- **Automation:** Workflows, Assignment Rules, and Duplicate Detection.
-- **Admin Tools:** User management, Audit Logs, and Recycle Bin.
+## 🚀 Key Features
 
-## Tech Stack
+### 🔐 Secure Authentication
+- **JWT Implementation:** Full JSON Web Token based authentication flow.
+- **Secure Registration & Login:** Password hashing with `bcryptjs`.
+- **Protected Routes:** Frontend route guards using `AuthContext` to ensure data security.
 
-- **Frontend:** React (Vite), Tailwind CSS, Recharts, React Router
-- **Backend:** Node.js, Express, MongoDB (Mongoose)
+### 📊 Real-time Dashboard & Analytics
+- **Dynamic Charts:** Visual representation of Sales Pipeline and Lead Sources using `Recharts`.
+- **KPI Tracking:** Real-time metrics for Total Leads, Opportunity Value, and Active Deals.
+- **Recent Activity:** Automated tracking of latest record updates across the CRM.
 
-## Getting Started
+### 💼 Comprehensive CRM Modules (Full CRUD)
+Sal provides a consistent and powerful interface for all core business entities:
+- **Leads & Accounts:** Track potential customers and business organizations.
+- **Contacts (New):** Manage individual relationships and link them to accounts.
+- **Opportunities:** Kanban board and list views to manage the sales funnel.
+- **Tasks:** Stay organized with task assignment and status tracking.
+- **Product Catalog:** Manage inventory and generate **Quotes** (PDF view support).
+- **Service Management:** Track customer **Cases** and internal **Knowledge Base** articles.
+
+### ⚙️ advanced Data Handling
+- **Server-side Pagination:** Efficient handling of large datasets in Leads and Opportunities.
+- **Global Search:** Search across multiple fields with debounced input for performance.
+- **Data Validation:** Backend request validation using **Joi** to ensure data integrity.
+- **Recycle Bin:** Safeguard data with soft-delete and restore capabilities.
+
+## 🛠 Tech Stack
+
+- **Frontend:** React 18 (Vite), Tailwind CSS, Recharts, Lucide Icons, Sonner (Toasts)
+- **Backend:** Node.js, Express.js
+- **Database:** MongoDB (Mongoose)
+- **Security:** JWT, BcryptJS
+
+## 🚦 Getting Started
 
 ### Prerequisites
+- Node.js (v16+)
+- MongoDB (Running instance)
 
-- Node.js (v14+ recommended)
-- MongoDB (running locally or a cloud instance)
+### Local Development Setup
 
-### Installation
-
-1.  **Clone the repository:**
+1.  **Clone the Repository**
     ```bash
-    git clone <repository-url>
-    cd sal
+    git clone https://github.com/AbhishekBorpa/Sales-CRM.git
+    cd Sales-CRM
     ```
 
-2.  **Backend Setup:**
+2.  **Server Setup**
     ```bash
     cd server
     npm install
-    # Create a .env file (optional, defaults provided):
-    # PORT=5001
-    # MONGO_URI=mongodb://localhost:27017/sales-cloud
-    npm run seed
+    # Set your JWT_SECRET in .env
+    npm run seed # Optional: Seed initial data
     npm run dev
     ```
 
-3.  **Frontend Setup:**
+3.  **Client Setup**
     ```bash
     cd ../client
     npm install
     npm run dev
     ```
-    - The application will be available at `http://localhost:5173`.
+    - Access the app at `http://localhost:5173`
 
-## API Configuration
+## 📡 API Layer
 
-The frontend interacts with the backend at `http://localhost:5001/api`.
-If you change the backend port, ensure you update `client/src/services/api.js`.
+Sal uses a centralized API service located at `client/src/services/api.js`. This service handles:
+- Consistent error handling using `sonner` toasts.
+- Automatic injection of Authorization headers.
+- RESTful interactions with all backend endpoints.
 
-## License
+## 📄 License
 
-ISC
+This project is licensed under the ISC License.
