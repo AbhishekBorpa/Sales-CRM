@@ -10,8 +10,32 @@ const { processAssignmentRules } = require('./assignmentRuleController');
 
 exports.getLeads = async (req, res) => {
     try {
-        const leads = await Lead.find({ isDeleted: false }).sort({ createdAt: -1 });
-        res.json(leads);
+        const { page = 1, limit = 10, search = '', status, source, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+        const query = { isDeleted: false };
+
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { company: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        if (status && status !== 'All') query.status = status;
+        if (source && source !== 'All') query.source = source;
+
+        const count = await Lead.countDocuments(query);
+        const leads = await Lead.find(query)
+            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit);
+
+        res.json({
+            leads,
+            totalPages: Math.ceil(count / limit),
+            currentPage: Number(page),
+            totalLeads: count
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

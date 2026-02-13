@@ -10,6 +10,10 @@ import Opportunities from './pages/Opportunities';
 import OpportunityDetail from './pages/OpportunityDetail';
 import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import Products from './pages/Products';
 import Quotes from './pages/Quotes';
@@ -30,47 +34,53 @@ import AssignmentRules from './pages/AssignmentRules';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/web-to-lead" element={<WebToLead />} />
-        <Route path="/" element={
-          <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-            <Sidebar />
-            <div className="flex-1 ml-64 flex flex-col overflow-hidden">
-              <Navbar />
-              <div className="flex-1 overflow-auto">
-                <div className="p-8 page-transition">
-                  <Outlet />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/web-to-lead" element={<WebToLead />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+                <Sidebar />
+                <div className="flex-1 ml-64 flex flex-col overflow-hidden">
+                  <Navbar />
+                  <div className="flex-1 overflow-auto">
+                    <div className="p-8 page-transition">
+                      <Outlet />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path="leads" element={<Leads />} />
-          <Route path="leads/:id" element={<LeadDetail />} />
-          <Route path="opportunities" element={<Opportunities />} />
-          <Route path="opportunities/:id" element={<OpportunityDetail />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="accounts" element={<Accounts />} />
-          <Route path="accounts/:id" element={<AccountDetail />} />
-          <Route path="products" element={<Products />} />
-          <Route path="quotes" element={<Quotes />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="cases" element={<Cases />} />
-          <Route path="knowledge" element={<KnowledgeBase />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="audit" element={<AuditLogs />} />
-          <Route path="org-chart" element={<OrgChart />} />
-          <Route path="recycle-bin" element={<RecycleBin />} />
-          <Route path="web-to-lead-settings" element={<WebToLeadSettings />} />
-          <Route path="email-templates" element={<EmailTemplates />} />
-          <Route path="workflows" element={<Workflows />} />
-          <Route path="duplicates" element={<DuplicateDetection />} />
-          <Route path="assignment-rules" element={<AssignmentRules />} />
-        </Route>
-      </Routes>
-    </Router>
+            </ProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="leads" element={<Leads />} />
+            <Route path="leads/:id" element={<LeadDetail />} />
+            <Route path="opportunities" element={<Opportunities />} />
+            <Route path="opportunities/:id" element={<OpportunityDetail />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="accounts" element={<Accounts />} />
+            <Route path="accounts/:id" element={<AccountDetail />} />
+            <Route path="products" element={<Products />} />
+            <Route path="quotes" element={<Quotes />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="cases" element={<Cases />} />
+            <Route path="knowledge" element={<KnowledgeBase />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="audit" element={<AuditLogs />} />
+            <Route path="org-chart" element={<OrgChart />} />
+            <Route path="recycle-bin" element={<RecycleBin />} />
+            <Route path="web-to-lead-settings" element={<WebToLeadSettings />} />
+            <Route path="email-templates" element={<EmailTemplates />} />
+            <Route path="workflows" element={<Workflows />} />
+            <Route path="duplicates" element={<DuplicateDetection />} />
+            <Route path="assignment-rules" element={<AssignmentRules />} />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

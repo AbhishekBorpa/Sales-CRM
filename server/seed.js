@@ -83,6 +83,7 @@ const seedData = async () => {
     await User.create({
         name: 'Demo Admin',
         email: 'admin@salescloud.com',
+        password: 'password123',
         role: 'Admin',
         title: 'System Administrator',
         phone: '555-0123'
@@ -91,15 +92,16 @@ const seedData = async () => {
     await User.create({
         name: 'Sarah Manager',
         email: 'sarah@salescloud.com',
+        password: 'password123',
         role: 'Manager',
         title: 'Sales Director',
         phone: '555-0124'
     });
 
     await User.create([
-        { name: 'Mike Sales', email: 'mike@salescloud.com', role: 'User', title: 'Account Executive', phone: '555-0125' },
-        { name: 'Jessica Rep', email: 'jessica@salescloud.com', role: 'User', title: 'SDR', phone: '555-0126' },
-        { name: 'Tom Agent', email: 'tom@salescloud.com', role: 'User', title: 'Support Agent', phone: '555-0127' }
+        { name: 'Mike Sales', email: 'mike@salescloud.com', password: 'password123', role: 'User', title: 'Account Executive', phone: '555-0125' },
+        { name: 'Jessica Rep', email: 'jessica@salescloud.com', password: 'password123', role: 'User', title: 'SDR', phone: '555-0126' },
+        { name: 'Tom Agent', email: 'tom@salescloud.com', password: 'password123', role: 'User', title: 'Support Agent', phone: '555-0127' }
     ]);
 
     console.log('Data Seeded Successfully!');

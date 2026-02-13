@@ -4,8 +4,27 @@ const OpportunityLineItem = require('../models/OpportunityLineItem');
 
 exports.getOpportunities = async (req, res) => {
     try {
-        const opps = await Opportunity.find({ isDeleted: false }).sort({ createdAt: -1 });
-        res.json(opps);
+        const { page = 1, limit = 10, search = '', sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+        const query = { isDeleted: false };
+
+        if (search) {
+            query.$or = [
+                { title: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const count = await Opportunity.countDocuments(query);
+        const opps = await Opportunity.find(query)
+            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit);
+
+        res.json({
+            opportunities: opps,
+            totalPages: Math.ceil(count / limit),
+            currentPage: Number(page),
+            totalOpportunities: count
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

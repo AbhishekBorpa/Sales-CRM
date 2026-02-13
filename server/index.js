@@ -17,6 +17,7 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
+app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/leads', require('./src/routes/leads'));
 app.use('/api/accounts', require('./src/routes/accounts'));
 app.use('/api/opportunities', require('./src/routes/opportunities'));
